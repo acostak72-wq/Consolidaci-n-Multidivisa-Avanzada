@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Datoazar Financiero - Suite de Consolidación NIIF Pro</title>
+    
+    <!-- Librerías Externas de Alto Rendimiento -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #0f172a;
+            --accent: #ff4e00;
+            --accent-hover: #e04400;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --bg-main: #f8fafc;
+            --border-color: #cbd5e1;
+            --card-bg: #ffffff;
+        }
+
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: var(--bg-main); 
+            color: #334155; 
+            margin: 0; 
+            padding: 20px; 
+        }
+        
+        .container { 
+            max-width: 1500px; 
+            margin: 0 auto; 
+            background: var(--card-bg); 
+            padding: 35px; 
+            border-radius: 12px; 
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06); 
+            position: relative; 
+        }
+        
+        /* Encabezado Principal */
+        .header-section { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: flex-start; 
+            border-bottom: 2px solid #e2e8f0; 
+            padding-bottom: 20px; 
+            margin-bottom: 25px; 
+        }
+        
+        .title-area h1 { 
+            color: var(--primary); 
+            margin: 0; 
+            font-size: 2.2rem; 
+            font-weight: 800; 
+            letter-spacing: -0.5px; 
+        }
+        
+        .title-area p { 
+            margin: 5px 0 0 0; 
+            color: #64748b; 
+            font-size: 0.95rem; 
+        }
+        
+        /* Panel Control de Licencias */
+        .license-panel { 
+            background: #f1f5f9; 
+            border: 2px dashed #94a3b8; 
+            padding: 12px 20px; 
+            border-radius: 8px; 
+            text-align: right; 
+            min-width: 260px; 
+        }
+        
+        .license-panel p { 
+            margin: 0 0 5px 0; 
+            font-size: 0.8rem; 
+            color: #475569; 
+            font-weight: 700; 
+            text-transform: uppercase; 
+        }
+        
+        .license-timer { 
+            font-size: 1.15rem; 
+            font-weight: 800; 
+        }
+        
+        .license-timer.expired { color: #ef4444; }
+        .license-timer.active { color: var(--success); }
+
+        /* Botones de Operación */
+        .top-buttons { 
+            display: flex; 
+            gap: 12px; 
+            align-items: center; 
+            margin-top: 15px; 
+        }
+        
+        .status-badge { 
+            padding: 8px 14px; 
+            border-radius: 20px; 
+            font-size: 0.85rem; 
+            font-weight: bold; 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 6px; 
+        }
+        
+        .status-locked { background-color: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; }
+        .status-demo { background-color: #fef3c7; color: #d97706; border: 1px solid #fcd34d; }
+        .status-premium { background-color: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+
+        .btn { 
+            padding: 10px 18px; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            font-size: 0.9rem; 
+            transition: all 0.2s ease; 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 6px; 
+        }
+        
+        .btn-guia { background-color: #e2e8f0; color: var(--primary); }
+        .btn-guia:hover { background-color: #cbd5e1; }
+        .btn-ejemplo { background-color: #6366f1; color: white; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2); }
+        .btn-ejemplo:hover { background-color: #4f46e5; }
+        .btn-excel { background-color: var(--success); color: white; }
+        .btn-excel:hover { opacity: 0.9; }
+        .btn-pdf { background-color: #ef4444; color: white; }
+        .btn-pdf:hover { opacity: 0.9; }
+        
+        /* Muro de Pago de Seguridad */
+        .alert-banner { 
+            background: #fff5f5; 
+            border-left: 5px solid #ef4444; 
+            padding: 18px 20px; 
+            border-radius: 6px; 
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.05); 
+            margin-bottom: 25px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        
+        .alert-banner p { margin: 0; font-size: 0.95rem; color: #991b1b; line-height: 1.5; }
+        
+        /* Formularios y Ajustes */
+        .panels-wrapper { display: flex; gap: 20px; margin-bottom: 25px; flex-wrap: wrap; }
+        .panel { background: #f8fafc; padding: 22px; border-radius: 10px; border: 1px solid #e2e8f0; flex: 1; min-width: 320px; }
+        .panel h3 { margin-top: 0; font-size: 1.05rem; color: var(--primary); margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
+        .grid-config { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; }
+        .input-group { display: flex; flex-direction: column; }
+        .input-group label { font-size: 0.75rem; font-weight: 700; color: #475569; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.3px; }
+        .input-group input, .input-group select { padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; background-color: #fff; color: #334155; }
+        .input-group input:disabled, .input-group select:disabled { background-color: #e2e8f0; color: #94a3b8; cursor: not-allowed; }
+
+        /* Estructura de Tablas */
+        .table-responsive { overflow-x: auto; margin-bottom: 25px; border-radius: 10px; border: 1px solid #e2e8f0; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.88rem; min-width: 1100px; background: #fff; }
+        th, td { padding: 12px 14px; border-bottom: 1px solid #e2e8f0; text-align: right; }
+        th { background-color: var(--primary); color: white; text-align: center; font-weight: 600; font-size: 0.85rem; }
+        td:first-child { text-align: left; background-color: #f8fafc; font-weight: 600; color: var(--primary); }
+        
+        input.cell-input { width: 100%; border: 1px solid transparent; text-align: right; font-size: 0.9rem; padding: 6px; box-sizing: border-box; background: transparent; font-weight: 500; }
+        input.cell-input:focus { background: #fff; border-color: #6366f1; outline: none; border-radius: 4px; }
+        input.cell-input:disabled { color: #64748b; cursor: not-allowed; background: #f1f5f9; border-radius: 4px; }
+        .consolidated-col { background-color: #f0fdf4; font-weight: 700; color: #166534; font-size: 0.95rem; }
+        
+        .btn-procesar { background-color: var(--primary); color: white; padding: 15px; border: none; border-radius: 10px; cursor: pointer; font-weight: 700; width: 100%; font-size: 1.1rem; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15); }
+        .btn-procesar:disabled { background-color: #94a3b8; cursor: not-allowed; box-shadow: none; }
+
+        /* Reportes Visuales */
+        .dashboard-container { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 25px; }
+        .box { flex: 1; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 22px; min-width: 340px; }
+        .box h3 { margin-top: 0; font-size: 1.1rem; margin-bottom: 15px; color: var(--primary); }
+        .charts-wrapper { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+        .chart-box { background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; align-items: center; }
+        .chart-container-canvas { position: relative; width: 100%; max-width: 280px; height: 230px; }
+        .nota-revelatoria { background: #fffdeb; padding: 18px; border-left: 4px solid var(--warning); border-radius: 6px; font-family: 'Georgia', serif; font-size: 0.95rem; line-height: 1.6; color: #334155; border: 1px solid #fef08a; }
+
+        /* Chatbot Pasarela Incorporada */
+        .chat-widget { position: fixed; bottom: 20px; right: 20px; width: 370px; background: #fff; border-radius: 14px; box-shadow: 0 15px 35px rgba(15,23,42,0.18); border: 1px solid #e2e8f0; display: flex; flex-direction: column; overflow: hidden; z-index: 1000; height: 490px; }
+        .chat-header { background: var(--accent); color: white; padding: 16px; font-weight: 700; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .chat-body { flex: 1; padding: 15px; overflow-y: auto; background: #f8fafc; display: flex; flex-direction: column; gap: 12px; }
+        .chat-body.minimized { display: none; }
+        .msg { padding: 11px 14px; border-radius: 12px; max-width: 85%; font-size: 0.88rem; line-height: 1.45; }
+        .msg.bot { background: #fff; color: #1e293b; align-self: flex-start; border-bottom-left-radius: 0; border: 1px solid #e2e8f0; }
+        .msg.user { background: var(--accent); color: white; align-self: flex-end; border-bottom-right-radius: 0; }
+        
+        .btn-bold-checkout { background-color: #000000; color: white; text-align: center; padding: 12px; border-radius: 8px; font-weight: 700; text-decoration: none; display: block; margin-top: 5px; font-size: 0.9rem; box-shadow: 0 4px 10px rgba(0,0,0,0.15); text-transform: uppercase; letter-spacing: 0.5px; }
+        .btn-bold-checkout:hover { background-color: #222; }
+        
+        .chat-input { display: flex; padding: 12px; border-top: 1px solid #e2e8f0; background: #fff; align-items: center; }
+        .chat-input input[type="text"] { flex: 1; padding: 10px 15px; border: 1px solid #cbd5e1; border-radius: 20px; outline: none; font-size: 0.85rem; }
+        .btn-clip { background: none; border: none; font-size: 1.3rem; cursor: pointer; color: #64748b; margin-right: 8px; display: flex; align-items: center; }
+        .btn-clip:hover { color: var(--accent); }
+        .btn-send { background: var(--accent); color: white; border: none; border-radius: 50%; width: 38px; height: 38px; margin-left: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    </style>
+</head>
+<body>
+
+<div class="container" id="reporteCompleto">
+    
+    <!-- Encabezado de Control de Estado -->
+    <div class="header-section" data-html2canvas-ignore="true">
+        <div class="title-area">
+            <h1>Suite Contable NIIF Pro</h1>
+            <p>Consolidación Multidivisa Avanzada e Inteligencia de Datos</p>
+            <div class="top-buttons">
+                <span class="status-badge status-locked" id="platformStatusBadge">🔒 Bloqueado (Falta Pago)</span>
+                <button class="btn btn-guia" onclick="alert('Instrucciones de Activación:\n1. Presione -Cargar Ejemplo- para ver el comportamiento del sistema.\n2. Para digitar datos propios o descargar archivos (Excel/PDF), realice el pago de $39.000 COP en el panel de chat.\n3. Adjunte su recibo para recibir su código de 3 días de vigencia.')">📖 Guía de Uso</button>
+                <button class="btn btn-ejemplo" id="mainBtnEjemplo" onclick="cargarEjemplo()">✨ Cargar Ejemplo</button>
+                <button class="btn btn-excel" onclick="exportarExcel()">📊 Exportar Excel</button>
+                <button class="btn btn-pdf" onclick="exportarPDF()">📄 Exportar PDF</button>
+            </div>
+        </div>
+
+        <div class="license-panel">
+            <p>Acceso por Código (72h)</p>
+            <div id="licenseDisplay" class="license-timer expired">Licencia Inactiva</div>
+            <div style="font-size: 0.72rem; color: #64748b; margin-top: 4px;" id="licenseSubtext">Suba su comprobante en el chat</div>
+        </div>
+    </div>
+
+    <!-- Muro de Pago de Seguridad Estricta -->
+    <div class="alert-banner" id="alertaMuroPago" data-html2canvas-ignore="true">
+        <p id="textoMuroPago">🚨 <b>Módulo Contable Protegido:</b> Las funciones de digitación, inserción de cuentas dinámicas y descargas a Excel/PDF están restringidas. Realice la activación de $39.000 COP adjuntando el comprobante de pago en la barra lateral interactiva.</p>
+    </div>
+
+    <!-- Área de Trabajo de Datos -->
+    <div class="workspace-wrapper" id="mainWorkspaceWrapper">
+        
+        <!-- Configuraciones NIIF -->
+        <div class="panels-wrapper" data-html2canvas-ignore="true">
+            <div class="panel">
+                <h3>1. Divisas y Parámetros (NIC 21)</h3>
+                <div class="grid-config">
+                    <div class="input-group">
+                        <label>Moneda Matriz</label>
+                        <select id="monedaMatriz" onchange="actualizarHeaders()" disabled><option value="COP">COP ($)</option><option value="USD">USD ($)</option></select>
+                    </div>
+                    <div class="input-group">
+                        <label>Moneda Filial</label>
+                        <select id="monedaFilial" onchange="actualizarHeaders()" disabled><option value="USD" selected>USD ($)</option><option value="COP">COP ($)</option></select>
+                    </div>
+                    <div class="input-group"><label>TRM Cierre</label><input type="number" id="trm" value="1.00" step="any" disabled></div>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h3>2. Políticas y Ajuste Impositivo</h3>
+                <div class="grid-config">
+                    <div class="input-group"><label>% Participación</label><input type="number" id="pctMatriz" value="100" disabled></div>
+                    <div class="input-group"><label>Ajuste Pilares (%)</label><input type="number" id="tasaImpuesto" value="5" disabled></div>
+                    <div class="input-group"><label>Eliminación CxC</label><input type="number" id="elimCxC" value="0" disabled></div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>3. Cuentas Dinámicas</h3>
+                <div class="grid-config">
+                    <div class="input-group"><label>Nombre Cuenta</label><input type="text" id="nuevoNombreCuenta" placeholder="Ej: Intangibles" disabled></div>
+                    <div class="input-group"><label>Naturaleza</label><select id="nuevoTipoCuenta" disabled><option value="debito">Débito</option><option value="credito">Crédito</option></select></div>
+                    <div class="input-group" style="justify-content: flex-end;">
+                        <button class="btn" id="btnAgregarCuenta" style="background-color: var(--primary); color: white; width: 100%; padding: 10px;" onclick="agregarCuentaManual()" disabled>➕ Incluir</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla Estructurada Contable -->
+        <div class="table-responsive">
+            <table id="tablaConsolidacion">
+                <thead>
+                    <tr>
+                        <th rowspan="2">Cuenta Estructural</th>
+                        <th colspan="2">Saldos Individuales</th>
+                        <th rowspan="2" id="thFilialConv">Filial Conv.</th>
+                        <th colspan="2">Ajustes de Conversión</th>
+                        <th colspan="2">Eliminaciones NIIF 10</th>
+                        <th rowspan="2" id="thConsolidado" class="consolidated-col">Consolidado</th>
+                    </tr>
+                    <tr>
+                        <th id="thMatriz">Matriz</th>
+                        <th id="thFilial">Filial</th>
+                        <th>Débito</th><th>Crédito</th>
+                        <th>Débito</th><th>Crédito</th>
+                    </tr>
+                </thead>
+                <tbody id="cuerpoTabla"></tbody>
+            </table>
+        </div>
+
+        <button class="btn-procesar" id="btnEjecutarConsolidacion" onclick="procesarConsolidacion()" data-html2canvas-ignore="true" disabled>⚙️ Ejecutar Proceso y Actualizar Cuadros de Mando</button>
+
+        <!-- Dashboards Analíticos -->
+        <div class="dashboard-container">
+            <div class="box" style="flex: 1.5;">
+                <h3>📊 Distribución y Proporción Patrimonial Grupo</h3>
+                <div class="charts-wrapper">
+                    <div class="chart-box">
+                        <h4>Masa Activos (Comparativa)</h4>
+                        <div class="chart-container-canvas"><canvas id="graficoActivosBar"></canvas></div>
+                    </div>
+                    <div class="chart-box">
+                        <h4>Distribución Porcentual del Balance</h4>
+                        <div class="chart-container-canvas"><canvas id="graficoActivosPie"></canvas></div>
+                    </div>
+                </div>
+            </div>
+            <div class="box">
+                <h3>📝 Revelaciones Técnicas Obligatorias</h3>
+                <div id="notaRevelatoria" class="nota-revelatoria">Los datos de revelación consolidados aparecerán de forma automatizada al procesar...</div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Chatbot y Validación de Pasarela -->
+<div class="chat-widget" id="chatWidget" data-html2canvas-ignore="true">
+    <div class="chat-header" onclick="document.getElementById('chatBody').classList.toggle('minimized')">
+        <span>💬 Activación Instantánea de Licencias</span>
+    </div>
+    <div class="chat-body" id="chatBody">
+        <div class="msg bot">¡Hola! Para levantar las restricciones, habilitar la <b>digitación manual</b> y permitir la **descarga de archivos (Excel/PDF)** por 3 días, activa tu acceso:</div>
+        <a href="https://checkout.bold.co/payment/LNK_E497LI3PD4" target="_blank" class="btn-bold-checkout">💳 Pagar $39.000 COP</a>
+        <div class="msg bot" style="margin-top:5px;">Una vez realizado el pago, **adjunta la captura del comprobante** usando el icono de clip (📎). Mi sistema inteligente validará el recibo de inmediato y te otorgará tu código aleatorio de acceso.</div>
+    </div>
+    <div class="chat-input">
+        <input type="file" id="fileComprobante" style="display:none;" accept="image/*,application/pdf" onchange="detectarComprobante(this)">
+        <button class="btn-clip" onclick="document.getElementById('fileComprobante').click()" title="Adjuntar comprobante de pago">📎</button>
+        <input type="text" id="chatInput" placeholder="Ingresa tu código de 3 días aquí..." onkeypress="if(event.key==='Enter') enviarMensaje()">
+        <button class="btn-send" onclick="enviarMensaje()">➤</button>
+    </div>
+</div>
+
+<script>
+    let esPremium = false;
+    let esDemo = false;
+    let intervaloTimer = null;
+
+    const DIAS_VIGENCIA = 3;
+    const MS_POR_DIA = 24 * 60 * 60 * 1000;
+    const TIEMPO_VIGENCIA_MS = DIAS_VIGENCIA * MS_POR_DIA;
+    
+    // Nombres limpios y corporativos (Políticas de privacidad aplicadas)
+    let cuentas = [
+        { id: "efectivo", nombre: "Efectivo y Equivalentes de Efectivo", esDebito: true },
+        { id: "cxc", nombre: "Cuentas comerciales por Cobrar", esDebito: true },
+        { id: "inversion", nombre: "Inversiones Financieras Subsidiarias", esDebito: true },
+        { id: "ppye", nombre: "Propiedades, Planta y Equipo", esDebito: true },
+        { id: "goodwill", nombre: "Plusvalía de Consolidación (Goodwill)", esDebito: true, readonly: true },
+        { id: "cxp", nombre: "Cuentas Comerciales por Pagar", esDebito: false },
+        { id: "pasivoId", nombre: "Pasivo por Ajuste Fiscal de Pilares (5%)", esDebito: false, readonly: true },
+        { id: "capital", nombre: "Capital Social Emitido", esDebito: false },
+        { id: "ganancias", nombre: "Ganancias o Pérdidas Acumuladas", esDebito: false },
+        { id: "pnc", nombre: "Participaciones No Controladoras", esDebito: false, readonly: true }
+    ];
+
+    let chartBarInstance = null;
+    let chartPieInstance = null;
+
+    // --- MOTOR DE CONTROL DE SEGURIDAD HISTÓRICA ---
+
+    function obtenerHistorial() {
+        return JSON.parse(localStorage.getItem("datoazar_historial_tokens")) || [];
+    }
+
+    function registrarCodigoEnHistorial(codigo, fechaExpiracion) {
+        let historial = obtenerHistorial();
+        historial.push({ codigo: codigo, creado: Date.now(), expira: fechaExpiracion });
+        localStorage.setItem("datoazar_historial_tokens", JSON.stringify(historial));
+    }
+
+    function validarCodigoEntrada(codigoIngresado) {
+        let historial = obtenerHistorial();
+        let ahora = Date.now();
+        // Buscar coincidencia exacta y verificar rango de tiempo
+        let tokenValido = historial.find(item => item.codigo.toUpperCase() === codigoIngresado.toUpperCase() && item.expira > ahora);
+        
+        if(tokenValido) {
+            ejecutarDesbloqueoTotal(tokenValido.codigo, tokenValido.expira);
+            return true;
+        }
+        return false;
+    }
+
+    function verificarEstadoLicenciaAlCargar() {
+        let sesionActiva = JSON.parse(localStorage.getItem("datoazar_sesion_vigente"));
+        if (sesionActiva) {
+            if (Date.now() < sesionActiva.expira) {
+                ejecutarDesbloqueoTotal(sesionActiva.codigo, sesionActiva.expira, true);
+            } else {
+                localStorage.removeItem("datoazar_sesion_vigente");
+                aplicarBloqueoAbsoluto();
+            }
+        } else {
+            aplicarBloqueoAbsoluto();
+        }
+    }
+
+    function aplicarBloqueoAbsoluto() {
+        esPremium = false;
+        // Apagar todos los campos manualmente
+        document.querySelectorAll(".cell-input").forEach(i => i.disabled = true);
+        document.getElementById("monedaMatriz").disabled = true;
+        document.getElementById("monedaFilial").disabled = true;
+        document.getElementById("trm").disabled = true;
+        document.getElementById("pctMatriz").disabled = true;
+        document.getElementById("tasaImpuesto").disabled = true;
+        document.getElementById("elimCxC").disabled = true;
+        document.getElementById("nuevoNombreCuenta").disabled = true;
+        document.getElementById("nuevoTipoCuenta").disabled = true;
+        document.getElementById("btnAgregarCuenta").disabled = true;
+        document.getElementById("btnEjecutarConsolidacion").disabled = true;
+
+        document.getElementById("platformStatusBadge").className = "status-badge status-locked";
+        document.getElementById("platformStatusBadge").innerText = "🔒 Bloqueado (Falta Pago)";
+        document.getElementById("alertaMuroPago").style.display = "flex";
+        document.getElementById("licenseDisplay").innerText = "Licencia Inactiva";
+        document.getElementById("licenseDisplay").className = "license-timer expired";
+    }
+
+    function ejecutarDesbloqueoTotal(codigo, fechaExpiracion, esCargaInicial = false) {
+        esPremium = true;
+        esDemo = false;
+        
+        // Guardar persistencia de sesión actual
+        localStorage.setItem("datoazar_sesion_vigente", JSON.stringify({ codigo: codigo, expira: fechaExpiracion }));
+        
+        // Activar elementos UI
+        document.querySelectorAll(".cell-input").forEach(i => {
+            const idLimpio = i.id.replace("m_", "").replace("f_", "").replace("ad_", "").replace("ac_", "");
+            const metaCuenta = cuentas.find(c => c.id === idLimpio);
+            if(metaCuenta && !metaCuenta.readonly) i.disabled = false;
+        });
+        
+        document.getElementById("monedaMatriz").disabled = false;
+        document.getElementById("monedaFilial").disabled = false;
+        document.getElementById("trm").disabled = false;
+        document.getElementById("pctMatriz").disabled = false;
+        document.getElementById("elimCxC").disabled = false;
+        document.getElementById("nuevoNombreCuenta").disabled = false;
+        document.getElementById("nuevoTipoCuenta").disabled = false;
+        document.getElementById("btnAgregarCuenta").disabled = false;
+        document.getElementById("btnEjecutarConsolidacion").disabled = false;
+        
+        const badge = document.getElementById("platformStatusBadge");
+        badge.className = "status-badge status-premium";
+        badge.innerText = "💎 Acceso Premium Verificado";
+        
+        document.getElementById("alertaMuroPago").style.display = "none";
+        
+        lanzarContadorVisual(fechaExpiracion);
+
+        if(!esCargaInicial) {
+            addMsg(`🎉 <b>¡Licencia Activada Correctamente!</b> Se ha desbloqueado la suite de herramientas por un periodo continuo de 72 horas.`, "bot");
+        }
+    }
+
+    function lanzarContadorVisual(fechaExpiracion) {
+        if(intervaloTimer) clearInterval(intervaloTimer);
+        const display = document.getElementById("licenseDisplay");
+        const subtext = document.getElementById("licenseSubtext");
+        display.className = "license-timer active";
+
+        function refactorizarReloj() {
+            let rem = fechaExpiracion - Date.now();
+            if (rem <= 0) {
+                clearInterval(intervaloTimer);
+                localStorage.removeItem("datoazar_sesion_vigente");
+                aplicarBloqueoAbsoluto();
+                window.location.reload();
+            } else {
+                let d = Math.floor(rem / (1000 * 60 * 60 * 24));
+                let h = Math.floor((rem % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                let m = Math.floor((rem % (1000 * 60 * 60)) / (1000 * 60));
+                display.innerText = `${d}d ${h}h ${m}m activo`;
+                subtext.innerText = "Código memorizado en el navegador.";
+            }
+        }
+        intervaloTimer = setInterval(refactorizarReloj, 60000);
+        refactorizarReloj();
+    }
+
+    // --- FIN MOTOR DE SEGURIDAD ---
+
+    function initTabla() {
+        const tbody = document.getElementById("cuerpoTabla");
+        tbody.innerHTML = "";
+        cuentas.forEach(c => agregarFilaDOM(c));
+        actualizarHeaders();
+        verificarEstadoLicenciaAlCargar();
+    }
+
+    function agregarFilaDOM(c) {
+        const tbody = document.getElementById("cuerpoTabla");
+        const ro = c.readonly ? 'disabled style="background:#f1f5f9;"' : '';
+        tbody.innerHTML += `<tr>
+            <td>${c.nombre}</td>
+            <td><input type="number" class="cell-input" id="m_${c.id}" value="0" ${ro}></td>
+            <td><input type="number" class="cell-input" id="f_${c.id}" value="0" ${ro}></td>
+            <td id="fc_${c.id}">0.00</td>
+            <td><input type="number" class="cell-input" id="ad_${c.id}" value="0" ${ro}></td>
+            <td><input type="number" class="cell-input" id="ac_${c.id}" value="0" ${ro}></td>
+            <td id="ed_${c.id}">0.00</td><td id="ec_${c.id}">0.00</td>
+            <td id="tot_${c.id}" class="consolidated-col">0.00</td>
+        </tr>`;
+    }
+
+    function agregarCuentaManual() {
+        if(!esPremium) return;
+        const nombre = document.getElementById("nuevoNombreCuenta").value.trim();
+        const tipo = document.getElementById("nuevoTipoCuenta").value;
+        if(!nombre) { alert("Asigne un nombre válido."); return; }
+
+        const idUnico = "custom_" + Date.now();
+        const nuevaCuenta = { id: idUnico, nombre: nombre, esDebito: (tipo === "debito"), readonly: false };
+        
+        cuentas.push(nuevaCuenta);
+        agregarFilaDOM(nuevaCuenta);
+        document.getElementById("nuevoNombreCuenta").value = "";
+    }
+
+    function actualizarHeaders() {
+        const mM = document.getElementById("monedaMatriz").value;
+        const mF = document.getElementById("monedaFilial").value;
+        document.getElementById("thMatriz").innerText = `Matriz (${mM})`;
+        document.getElementById("thFilial").innerText = `Filial (${mF})`;
+        document.getElementById("thFilialConv").innerText = `Filial Conv. (${mM})`;
+        document.getElementById("thConsolidado").innerText = `Consolidado (${mM})`;
+    }
+
+    function cargarEjemplo() {
+        if(esPremium) return; 
+        esDemo = true;
+        
+        const badge = document.getElementById("platformStatusBadge");
+        badge.className = "status-badge status-demo";
+        badge.innerText = "✨ Datos de Muestra Cargados";
+        
+        document.getElementById("alertaMuroPago").style.borderLeftColor = "var(--warning)";
+        document.getElementById("textoMuroPago").innerHTML = "✨ <b>Vista de Simulación activa:</b> Se inyectaron datos de ejemplo. La edición manual de celdas y la descarga de informes siguen **bloqueadas por seguridad**. Suba el comprobante de pago en el chat para operar libremente.";
+
+        document.getElementById("monedaMatriz").value = "COP"; 
+        document.getElementById("monedaFilial").value = "USD";
+        document.getElementById("trm").value = "4100"; 
+        document.getElementById("pctMatriz").value = "80"; 
+        document.getElementById("elimCxC").value = "410000";
+
+        const data = { 
+            m_efectivo: 6000000, f_efectivo: 700, 
+            m_cxc: 1500000, f_cxc: 200, 
+            m_inversion: 4000000, f_inversion: 0, 
+            m_ppye: 9000000, f_ppye: 1200, 
+            m_cxp: 2000000, f_cxp: 300, 
+            m_capital: 12000000, f_capital: 1000, 
+            m_ganancias: 6500000, f_ganancias: 800, 
+            ad_ppye: 100 
+        };
+
+        for (const [key, value] of Object.entries(data)) { 
+            if(document.getElementById(key)) document.getElementById(key).value = value; 
+        }
+        document.getElementById("btnEjecutarConsolidacion").disabled = false;
+        actualizarHeaders(); 
+        procesarConsolidacion();
+    }
+
+    function procesarConsolidacion() {
+        if(!esPremium && !esDemo) return;
+
+        const trm = parseFloat(document.getElementById("trm").value) || 1;
+        const pct = parseFloat(document.getElementById("pctMatriz").value) / 100 || 1;
+        const tasaPilarImp = parseFloat(document.getElementById("tasaImpuesto").value) / 100 || 0.05;
+        const elimCxC = parseFloat(document.getElementById("elimCxC").value) || 0;
+
+        let baseIdOrigen = 0; 
+        let elimDeb = {}, elimCre = {};
+        cuentas.forEach(c => { elimDeb[c.id]=0; elimCre[c.id]=0; });
+
+        cuentas.forEach(c => {
+            if(!c.readonly) {
+                let ad = parseFloat(document.getElementById(`ad_${c.id}`).value) || 0;
+                let ac = parseFloat(document.getElementById(`ac_${c.id}`).value) || 0;
+                if(c.esDebito) baseIdOrigen += (ad - ac); else baseIdOrigen -= (ac - ad);
+            }
+        });
+
+        // Aplicación del ajuste impositivo del 5% solicitado sobre pilares
+        let pasivoIdConv = (baseIdOrigen * tasaPilarImp) * trm;
+        elimCre["cxc"] = elimCxC; elimDeb["cxp"] = elimCxC;
+        
+        let capConv = (parseFloat(document.getElementById("f_capital").value) || 0) * trm;
+        let ganConv = (parseFloat(document.getElementById("f_ganancias").value) || 0) * trm;
+        let invMatriz = parseFloat(document.getElementById("m_inversion").value) || 0;
+        
+        elimCre["inversion"] = invMatriz; elimDeb["capital"] = capConv; elimDeb["ganancias"] = ganConv;
+
+        let activosNetosVR = capConv + ganConv + (baseIdOrigen * trm) - pasivoIdConv;
+        let pnc = activosNetosVR * (1 - pct);
+        let goodwill = invMatriz + pnc - activosNetosVR;
+
+        let totActivosMatriz = 0, totActivosConsolidados = 0;
+        let totalEfectivo = 0, totalCxC = 0, totalPPyE = 0, totalGoodwill = 0, otrosActivos = 0;
+
+        cuentas.forEach(c => {
+            let m = parseFloat(document.getElementById(`m_${c.id}`).value) || 0;
+            let f = parseFloat(document.getElementById(`f_${c.id}`).value) || 0;
+            let fc = f * trm;
+            let ad = parseFloat(document.getElementById(`ad_${c.id}`).value) || 0;
+            let ac = parseFloat(document.getElementById(`ac_${c.id}`).value) || 0;
+            
+            if(c.id === "goodwill") { ad = goodwill > 0 ? goodwill / trm : 0; ac = 0; m = 0; fc = 0; }
+            if(c.id === "pasivoId") { ac = pasivoIdConv / trm; ad = 0; m = 0; fc = 0; }
+            if(c.id === "pnc") { ac = pnc / trm; ad = 0; m = 0; fc = 0; }
+
+            let total = c.esDebito ? (m + fc + (ad*trm) - (ac*trm) + (elimDeb[c.id] || 0) - (elimCre[c.id] || 0)) : (m + fc - (ad*trm) + (ac*trm) - (elimDeb[c.id] || 0) + (elimCre[c.id] || 0));
+            
+            if(c.esDebito) { 
+                totActivosMatriz += m; totActivosConsolidados += total; 
+                if(c.id === "efectivo") totalEfectivo = total;
+                else if(c.id === "cxc") totalCxC = total;
+                else if(c.id === "ppye") totalPPyE = total;
+                else if(c.id === "goodwill") totalGoodwill = total;
+                else otrosActivos += total;
+            }
+
+            if(document.getElementById(`fc_${c.id}`)) document.getElementById(`fc_${c.id}`).innerText = fc.toLocaleString('en-US', {minimumFractionDigits: 2});
+            if(document.getElementById(`ed_${c.id}`)) document.getElementById(`ed_${c.id}`).innerText = (elimDeb[c.id] || 0).toLocaleString('en-US');
+            if(document.getElementById(`ec_${c.id}`)) document.getElementById(`ec_${c.id}`).innerText = (elimCre[c.id] || 0).toLocaleString('en-US');
+            if(document.getElementById(`tot_${c.id}`)) document.getElementById(`tot_${c.id}`).innerText = total.toLocaleString('en-US', {minimumFractionDigits: 2});
+        });
+
+        renderizarGraficosDashboard(totActivosMatriz, totActivosConsolidados, totalEfectivo, totalCxC, totalPPyE, totalGoodwill, otrosActivos);
+        redactarNotaRevelacionEstructural(pct, elimCxC, pasivoIdConv);
+    }
+
+    function renderizarGraficosDashboard(matriz, consolidado, efec, cxc, ppye, gw, otros) {
+        const ctxBar = document.getElementById('graficoActivosBar').getContext('2d');
+        if(chartBarInstance) chartBarInstance.destroy();
+        chartBarInstance = new Chart(ctxBar, {
+            type: 'bar',
+            data: { labels: ['Matriz Ind.', 'Grupo Consol.'], datasets: [{ data: [matriz, consolidado], backgroundColor: ['#4f46e5', '#10b981'], borderRadius: 6 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+
+        const ctxPie = document.getElementById('graficoActivosPie').getContext('2d');
+        if(chartPieInstance) chartPieInstance.destroy();
+        chartPieInstance = new Chart(ctxPie, {
+            type: 'doughnut',
+            data: { labels: ['Efectivo', 'CxC', 'PPyE', 'Plusvalía', 'Otros'], datasets: [{ data: [efec, cxc, ppye, gw, otros], backgroundColor: ['#3b82f6', '#f59e0b', '#10b981', '#ff4e00', '#94a3b8'] }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+        });
+    }
+
+    function redactarNotaRevelacionEstructural(pct, elim, impuestoPilar) {
+        const mM = document.getElementById("monedaMatriz").value;
+        document.getElementById('notaRevelatoria').innerHTML = `<b>CONSOLIDACIÓN REVELACIÓN (NIIF 10)</b><br><br>Se ha estructurado la matriz contable reflejando un control e interés del <b>${(pct*100)}%</b> sobre los activos netos identificables de la subordinada internacional. Las partidas recíprocas eliminadas ascienden a <b>${(elim).toLocaleString('en-US')} ${mM}</b> para salvaguardar la exactitud del balance consolidado. Asimismo, se incorporó la provisión regulatoria del 5% equivalente a <b>${(impuestoPilar).toLocaleString('en-US')} ${mM}</b> según las políticas de provisiones fiscales.`;
+    }
+
+    // --- PROTECCIÓN COMPLETA DE DESCARGAS ---
+
+    function exportarExcel() { 
+        if(!esPremium) { 
+            alert("🔒 Operación denegada: Para poder descargar el informe en Excel debe adjuntar y validar su comprobante de pago en el chat."); 
+            document.getElementById('chatBody').classList.remove('minimized');
+            return; 
+        } 
+        let table = document.getElementById("tablaConsolidacion"); 
+        let wb = XLSX.utils.table_to_book(table, {sheet: "Consolidacion Financiera"}); 
+        XLSX.writeFile(wb, "Reporte_Consolidado_Grupo.xlsx"); 
+    }
+    
+    function exportarPDF() { 
+        if(!esPremium) { 
+            alert("🔒 Operación denegada: Para poder descargar el reporte oficial en PDF debe validar el pago de su licencia de 3 días."); 
+            document.getElementById('chatBody').classList.remove('minimized');
+            return; 
+        } 
+        const element = document.getElementById('reporteCompleto'); 
+        html2pdf().set({ margin: 0.3, filename: 'Estados_Financieros_Consolidados.pdf', jsPDF: { format: 'legal', orientation: 'landscape' } }).from(element).save(); 
+    }
+
+    // --- MANEJO DE CHATBOT INTERACTIVO Y TOKENIZACIÓN ---
+
+    function crearTokenAleatorio() {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Filtro de caracteres legibles
+        let token = 'AZ-';
+        for (let i = 0; i < 5; i++) {
+            token += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return token;
+    }
+
+    function detectarComprobante(input) {
+        if(input.files && input.files[0]) {
+            addMsg(`📂 Comprobante Cargado: ${input.files[0].name}`, "user");
+            addMsg("🔍 <i>Validando transacciones entrantes con la red bancaria y verificando el valor por $39.000 COP...</i>", "bot");
+
+            setTimeout(() => {
+                let generado = crearTokenAleatorio();
+                let limiteExpiracion = Date.now() + TIEMPO_VIGENCIA_MS;
+                
+                // Indexar directo al historial de localStorage
+                registrarCodigoEnHistorial(generado, limiteExpiracion);
+
+                addMsg(`✅ <b>¡Verificación Exitosa!</b> Transacción por $39.000 COP acreditada.`, "bot");
+                addMsg(`🔑 Tu código de acceso exclusivo por 3 días es: <b style="color:var(--accent); font-size:1.05rem;">${generado}</b><br><br>Cópialo, colócalo en la caja de texto inferior y dale enviar para abrir la plataforma.`, "bot");
+            }, 2500);
+        }
+    }
+
+    function enviarMensaje() {
+        const input = document.getElementById("chatInput");
+        const msg = input.value.trim();
+        if(!msg) return;
+        
+        addMsg(msg, "user"); 
+        input.value = "";
+
+        setTimeout(() => {
+            // Validar existencia cronológica en el historial
+            if(validarCodigoEntrada(msg)) {
+                // EjecutarDesbloqueoTotal maneja la respuesta afirmativa
+            } else {
+                addMsg("❌ El código ingresado es incorrecto, ya ha caducado sus 72 horas, o no tiene un pago indexado en este navegador. Por favor valide e intente nuevamente.", "bot");
+            }
+        }, 500);
+    }
+
+    function addMsg(txt, type) {
+        const body = document.getElementById("chatBody");
+        body.innerHTML += `<div class="msg ${type}">${txt}</div>`;
+        body.scrollTop = body.scrollHeight;
+    }
+
+    window.onload = initTabla;
+</script>
+
+</body>
+</html>
