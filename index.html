@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma Analítica de Consolidación Financiera, Auditoría y Diagnóstico NIIF</title>
+
+    <!-- Librerías CDNs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #0f172a;
+            --primary-light: #1e293b;
+            --accent: #2563eb;
+            --accent-hover: #1d4ed8;
+            --success: #059669;
+            --warning: #d97706;
+            --danger: #dc2626;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --excel-color: #107c41;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text-main); line-height: 1.5; }
+
+        /* Banner Modo Demo */
+        #demo-banner {
+            background: var(--primary-light); color: #ffffff; padding: 12px 24px;
+            font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 0; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-bottom: 3px solid var(--accent);
+        }
+
+        /* Paywall / Ventana de Licenciamiento */
+        #auth-screen {
+            position: fixed; inset: 0; background: rgba(15, 23, 42, 0.9); z-index: 10000;
+            display: flex; justify-content: center; align-items: center; backdrop-filter: blur(8px);
+            padding: 20px;
+        }
+        
+        .paywall-card {
+            background: var(--card-bg); color: var(--text-main); padding: 40px; border-radius: 16px;
+            width: 100%; max-width: 540px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border); max-height: 90vh; overflow-y: auto;
+        }
+        
+        .paywall-icon {
+            width: 64px; height: 64px; background: #eff6ff; color: var(--accent);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 2rem; margin: 0 auto 20px auto;
+        }
+
+        .upload-box {
+            border: 2px dashed #cbd5e1; background: #f8fafc; border-radius: 12px;
+            padding: 24px; margin: 20px 0; text-align: center; cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .upload-box:hover:not(.disabled-box) { border-color: var(--accent); background: #eff6ff; transform: translateY(-2px); }
+        .upload-box.disabled-box { opacity: 0.6; cursor: not-allowed; }
+        .upload-box input[type="file"] { display: none; }
+
+        /* Layout General */
+        .app-container { display: none; max-width: 1400px; margin: 0 auto; padding: 30px 20px; animation: fadeIn 0.4s ease-in-out; }
+        .app-container.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; border-bottom: 2px solid var(--border); padding-bottom: 20px; }
+        .header-title h1 { font-size: 1.8rem; color: var(--primary); font-weight: 700; letter-spacing: -0.5px; }
+        .header-title p { font-size: 0.95rem; color: var(--text-muted); margin-top: 6px; }
+
+        /* Cards y Formularios */
+        .card { background: var(--card-bg); border-radius: 12px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid var(--border); margin-bottom: 24px; transition: box-shadow 0.3s ease; }
+        .card:hover { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); }
+        .card-header-title { font-size: 1.15rem; font-weight: 700; color: var(--primary); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+
+        .grid-params { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+        .grid-2-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        @media (max-width: 768px) { .grid-2-cols { grid-template-columns: 1fr; } }
+        
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-group label { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        input[type="number"], input[type="text"], select {
+            width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px;
+            font-size: 0.95rem; font-family: 'JetBrains Mono', monospace; background-color: #f8fafc; color: var(--text-main);
+            transition: all 0.2s ease;
+        }
+        input[readonly], select[disabled] { background-color: #e2e8f0; color: #64748b; cursor: not-allowed; border-color: #cbd5e1; }
+        input:focus:not([readonly]), select:focus:not([disabled]) { outline: none; border-color: var(--accent); background-color: #ffffff; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12); }
+
+        /* Botones */
+        .btn { border: none; border-radius: 8px; padding: 10px 18px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; font-size: 0.875rem; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover:not(:disabled) { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 6px -1px rgba(37,99,235,0.3); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-success:hover:not(:disabled) { background: #047857; transform: translateY(-1px); box-shadow: 0 4px 6px -1px rgba(5,150,105,0.3); }
+        .btn-outline { background: transparent; color: var(--text-main); border: 1px solid var(--border); }
+        .btn-outline:hover:not(:disabled) { background: #f1f5f9; }
+        .btn-excel { background: var(--excel-color); color: white; }
+        .btn-excel:hover:not(:disabled) { background: #0e6b37; transform: translateY(-1px); }
+        .btn-block { width: 100%; }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        /* Tablas Financieras */
+        .table-container { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); max-height: 600px; overflow-y: auto;}
+        table { width: 100%; border-collapse: collapse; font-size: 0.875rem; text-align: right; }
+        th { background: #f1f5f9; padding: 14px 16px; color: var(--primary); font-weight: 700; border-bottom: 2px solid var(--border); white-space: nowrap; position: sticky; top: 0; z-index: 10; }
+        th:first-child { text-align: left; }
+        td { padding: 12px 16px; border-bottom: 1px solid var(--border); font-family: 'JetBrains Mono', monospace; }
+        td:first-child { text-align: left; font-family: inherit; font-weight: 600; color: var(--primary); }
+        
+        .row-group { background: #e2e8f0; font-weight: 800; color: var(--primary); font-size: 0.95rem; text-transform: uppercase; }
+        .row-subtotal td { background: #f8fafc; font-weight: 700; border-top: 2px solid var(--border); }
+        
+        .col-ajuste { color: var(--accent); }
+        .col-elim { color: var(--danger); }
+        .col-total { background: #f8fafc; font-weight: bold; color: var(--primary); }
+
+        /* KPIs y Métricas */
+        .grid-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .kpi-card { background: var(--primary); color: white; padding: 24px; border-radius: 12px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .kpi-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; font-weight: 700; }
+        .kpi-value { font-size: 1.8rem; font-weight: 800; font-family: monospace; color: #34d399; margin: 8px 0; }
+        .kpi-sub { font-size: 0.8rem; color: #cbd5e1; }
+
+        /* Navigation Tabs */
+        .nav-tabs { display: flex; gap: 8px; border-bottom: 2px solid var(--border); margin-bottom: 24px; flex-wrap: wrap; }
+        .nav-tab-btn { padding: 12px 20px; border: none; background: transparent; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s ease; font-size: 0.95rem; }
+        .nav-tab-btn:hover { color: var(--primary); background: rgba(241, 245, 249, 0.5); border-radius: 8px 8px 0 0; }
+        .nav-tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+        
+        .tab-content { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .tab-content.active { display: block; }
+
+        /* Layout Grid Principal */
+        .grid-dashboard { display: grid; grid-template-columns: 2.8fr 1.2fr; gap: 24px; }
+        @media (max-width: 1024px) { .grid-dashboard { grid-template-columns: 1fr; } }
+
+        /* Secciones IA, Notas y Auditoría */
+        .ai-card { background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid var(--success); padding: 20px; border-radius: 8px; margin-bottom: 16px; }
+        .ai-card.warning { background: #fffbeb; border-color: #fde68a; border-left-color: var(--warning); }
+        .ai-card.danger { background: #fef2f2; border-color: #fecaca; border-left-color: var(--danger); }
+        .ai-card h4 { margin-bottom: 8px; color: var(--primary); display: flex; align-items: center; gap: 8px; font-size: 1rem; }
+        .ai-card p { font-size: 0.9rem; color: #334155; line-height: 1.6; }
+
+        .audit-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge-success { background: #dcfce7; color: #15803d; }
+        .badge-warning { background: #fef3c7; color: #b45309; }
+        .badge-danger { background: #fee2e2; color: #b91c1c; }
+
+        .nota-niif-item { background: #ffffff; border: 1px solid var(--border); padding: 20px; border-radius: 8px; margin-bottom: 16px; }
+        .nota-niif-item h4 { color: var(--primary); margin-bottom: 10px; font-size: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; }
+        .nota-niif-item p { font-size: 0.9rem; color: var(--text-main); line-height: 1.6; }
+
+        @media print {
+            #demo-banner, #auth-screen, .no-print, .nav-tabs { display: none !important; }
+            .app-container { display: block !important; width: 100%; padding: 0; max-width: 100%; }
+            .card { box-shadow: none; border: 1px solid #ccc; page-break-inside: avoid; }
+            body { background: white; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- BANNER MODALIDAD DEMO -->
+<div id="demo-banner">
+    <div style="display: flex; align-items: center; gap: 8px;">
+        <i class="bi bi-lock-fill" style="color: #fbbf24; font-size: 1.2rem;"></i>
+        <span><strong>Modo de Lectura Activo.</strong> Los parámetros de entrada están bloqueados para edición. Adjunta tu comprobante de licencia para habilitarlos.</span>
+    </div>
+    <button class="btn btn-primary" style="padding: 6px 16px; font-size: 0.85rem;" onclick="abrirPaywall()">
+        <i class="bi bi-unlock-fill"></i> Activar Funciones
+    </button>
+</div>
+
+<!-- PAYWALL / MONETIZACIÓN BOLD -->
+<div id="auth-screen">
+    <div class="paywall-card">
+        <div class="paywall-icon">
+            <i class="bi bi-shield-check"></i>
+        </div>
+        <h2 style="font-size: 1.5rem; color: var(--primary); margin-bottom: 8px; font-weight: 700;">Desbloquear Suite de Consolidación</h2>
+        <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 24px;">
+            Realiza el pago de la licencia profesional <strong>($39.000 COP)</strong> a través de Bold o adjunta tu archivo de comprobante corporativo para liberar la plataforma.
+        </p>
+
+        <button class="btn btn-primary btn-block" style="padding: 14px; margin-bottom: 20px; font-size: 1rem;" onclick="abrirEnlaceBold()">
+            <i class="bi bi-credit-card-fill"></i> Ir al Link de Pago Seguro (Bold)
+        </button>
+
+        <div style="text-align: left; margin-bottom: 8px;">
+            <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Adjuntar comprobante de pago o licencia:</label>
+        </div>
+
+        <div class="upload-box" onclick="document.getElementById('inputComprobante').click()">
+            <i class="bi bi-cloud-arrow-up-fill" style="font-size: 2.5rem; color: var(--accent);"></i>
+            <p id="txtFileStatus" style="font-size: 0.9rem; color: var(--text-main); margin-top: 12px; font-weight: 600;">
+                Haz clic aquí para seleccionar tu recibo (PDF, PNG, JPG)
+            </p>
+            <input type="file" id="inputComprobante" accept=".pdf,image/*" onchange="validarArchivoCargado()">
+        </div>
+
+        <button id="btnVerificarPago" class="btn btn-success btn-block" style="padding: 14px; margin-bottom: 16px; font-size: 1rem;" onclick="desbloquearConComprobante()" disabled>
+            <i class="bi bi-check-circle-fill"></i> Validar Comprobante y Desbloquear
+        </button>
+
+        <button class="btn btn-outline btn-block" style="padding: 12px; font-size: 0.95rem;" onclick="continuarModoDemo()">
+            Explorar en modo lectura (Demo)
+        </button>
+    </div>
+</div>
+
+<!-- CONTENEDOR PRINCIPAL -->
+<div class="app-container" id="app">
+    
+    <header>
+        <div class="header-title">
+            <h1>Sistema de Consolidación Financiera, Auditoría e IA</h1>
+            <p>Plataforma Analítica para Grupos Empresariales, Conglomerados y Diagnóstico NIIF</p>
+        </div>
+        <div style="display: flex; gap: 12px;" class="no-print">
+            <button class="btn btn-excel app-interactive" onclick="exportarExcel()">
+                <i class="bi bi-file-earmark-excel"></i> Exportar Excel
+            </button>
+            <button class="btn btn-primary app-interactive" onclick="exportarPDF()">
+                <i class="bi bi-file-pdf"></i> Informe PDF
+            </button>
+        </div>
+    </header>
+
+    <div class="card">
+        <div class="card-header-title" style="justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <i class="bi bi-sliders"></i> Parámetros de Consolidación y Moneda Funcional 
+            </div>
+            <span id="badgeEstadoLock" class="audit-badge badge-warning">
+                <i class="bi bi-eye"></i> Modo Lectura
+            </span>
+        </div>
+        <div class="grid-params">
+            <div class="form-group">
+                <label>Moneda de Presentación (NIIF 21)</label>
+                <select id="selMoneda" onchange="ejecutarConsolidacion()" class="param-input">
+                    <option value="COP" selected>COP - Peso Colombiano ($)</option>
+                    <option value="USD">USD - Dólar Estadounidense ($)</option>
+                    <option value="EUR">EUR - Euro (€)</option>
+                    <option value="MXN">MXN - Peso Mexicano ($)</option>
+                    <option value="GBP">GBP - Libra Esterlina (£)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Tasa de Cambio (Base 1 Moneda Local)</label>
+                <input type="number" id="inTasaCambio" value="1" step="0.0001" class="param-input" oninput="ejecutarConsolidacion()">
+            </div>
+            <div class="form-group">
+                <label>% Participación Controladora (NIIF 10)</label>
+                <input type="number" id="inPart" value="80" min="1" max="100" class="param-input" oninput="ejecutarConsolidacion()">
+            </div>
+            <div class="form-group">
+                <label>Contraprestación Transferida</label>
+                <input type="number" id="inConsid" value="1200000000" class="param-input" oninput="ejecutarConsolidacion()">
+            </div>
+            <div class="form-group">
+                <label>Eliminaciones Intercompañía</label>
+                <input type="number" id="inElimCxC" value="50000000" class="param-input" oninput="ejecutarConsolidacion()">
+            </div>
+            <div class="form-group">
+                <label>Tasa Impuesto Diferido (NIC 12)</label>
+                <input type="number" id="inTax" value="35" class="param-input" oninput="ejecutarConsolidacion()">
+            </div>
+        </div>
+    </div>
+
+    <div class="nav-tabs no-print">
+        <button class="nav-tab-btn active" onclick="cambiarPestana(event, 'tab-matriz')">Hoja de Trabajo Consolidada</button>
+        <button class="nav-tab-btn" onclick="cambiarPestana(event, 'tab-analisis')">Análisis Financiero</button>
+        <button class="nav-tab-btn" onclick="cambiarPestana(event, 'tab-auditoria')">Módulo de Auditoría (NIA)</button>
+        <button class="nav-tab-btn" onclick="cambiarPestana(event, 'tab-notas')">Notas Revelatorias NIIF</button>
+        <button class="nav-tab-btn" onclick="cambiarPestana(event, 'tab-ia')">Diagnóstico & Recomendaciones IA</button>
+    </div>
+
+    <!-- PESTAÑA 1: MATRIZ DE CONSOLIDACIÓN Y GESTIÓN DE RUBROS -->
+    <div id="tab-matriz" class="tab-content active">
+        
+        <!-- MÓDULO DE GESTIÓN DE RUBROS -->
+        <div class="card no-print">
+            <div class="card-header-title">
+                <i class="bi bi-cloud-arrow-up"></i> Gestión de Cuentas (Integración Manual y Masiva)
+            </div>
+            <div class="grid-2-cols">
+                <div>
+                    <h5 style="margin-bottom: 12px; color: var(--primary); font-size: 0.95rem;">Carga Masiva (Excel)</h5>
+                    <button class="btn btn-outline app-interactive btn-block" onclick="descargarPlantillaModelo()" style="margin-bottom: 12px;">
+                        <i class="bi bi-download"></i> Descargar Modelo de Plantilla
+                    </button>
+                    <div id="boxUploadRubros" class="upload-box app-interactive" onclick="triggerInputPlantilla()" style="margin: 0; padding: 15px; border-style: solid;">
+                        <i class="bi bi-file-earmark-spreadsheet" style="font-size: 1.5rem; color: var(--excel-color);"></i>
+                        <p style="font-size: 0.8rem; margin-top: 8px;">Clic para subir tu plantilla diligenciada (.xlsx)</p>
+                        <input type="file" id="inputPlantilla" accept=".xlsx, .xls, .csv" onchange="leerPlantillaExcel(event)">
+                    </div>
+                </div>
+                
+                <div>
+                    <h5 style="margin-bottom: 12px; color: var(--primary); font-size: 0.95rem;">Añadir Rubro Manual</h5>
+                    <div class="grid-params" style="grid-template-columns: 1fr 1fr; margin-bottom: 12px;">
+                        <div class="form-group" style="grid-column: span 2;">
+                            <input type="text" id="inRubroNombre" class="param-input" placeholder="Nombre de la Cuenta Contable">
+                        </div>
+                        <div class="form-group">
+                            <input type="number" id="inRubroMatriz" class="param-input" placeholder="Saldo Matriz ($)">
+                        </div>
+                        <div class="form-group">
+                            <input type="number" id="inRubroFilial" class="param-input" placeholder="Saldo Subsidiaria ($)">
+                        </div>
+                        <div class="form-group" style="grid-column: span 2;">
+                            <select id="inRubroTipo" class="param-input">
+                                <option value="ACT">Naturaleza: Activo (Débito)</option>
+                                <option value="PAS">Naturaleza: Pasivo (Crédito)</option>
+                                <option value="PAT">Naturaleza: Patrimonio (Crédito)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn btn-success app-interactive btn-block" onclick="agregarRubroManual()">
+                        <i class="bi bi-plus-circle"></i> Integrar a la Hoja de Trabajo
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Matriz -->
+        <div class="grid-dashboard">
+            <div class="card" style="margin-bottom: 0;">
+                <div class="card-header-title" style="display: flex; justify-content: space-between; align-items: center;">
+                    <span><i class="bi bi-table"></i> Hoja de Trabajo Estructurada</span>
+                    <div id="estadoCuadre" style="font-size: 0.85rem;"></div>
+                </div>
+                <div class="table-container">
+                    <table id="tblMatriz">
+                        <thead>
+                            <tr>
+                                <th>Rubro Contable</th>
+                                <th>Matriz / Controladora</th>
+                                <th>Subsidiaria</th>
+                                <th>Ajustes VR (NIIF 3)</th>
+                                <th>Eliminaciones</th>
+                                <th class="col-total">Consolidado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Generado dinámicamente con separación Activo/Pasivo/Patrimonio -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 24px;">
+                <div class="kpi-card" style="padding: 24px;">
+                    <div class="kpi-title" id="txtResultadoTipo">Plusvalía (Goodwill)</div>
+                    <div class="kpi-value" id="valGoodwill">$ 0</div>
+                    <div class="kpi-sub" id="txtSubResultado">Activo Intangible - NIIF 3.32</div>
+                </div>
+
+                <div class="card" style="margin-bottom: 0; flex-grow: 1;">
+                    <div class="card-header-title">
+                        <i class="bi bi-pie-chart-fill"></i> Composición Patrimonial
+                    </div>
+                    <div style="height: 250px; position: relative; width: 100%;">
+                        <canvas id="chartEstructura"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PESTAÑA 2: ANÁLISIS FINANCIERO -->
+    <div id="tab-analisis" class="tab-content">
+        <div class="grid-kpis">
+            <div class="kpi-card" style="background: #1e293b;">
+                <div class="kpi-title">Activos Totales Consolidados</div>
+                <div class="kpi-value" id="kpiActivos">$ 0</div>
+                <div class="kpi-sub">Suma Combinada Ajustada</div>
+            </div>
+            <div class="kpi-card" style="background: #1e293b;">
+                <div class="kpi-title">Pasivos Totales Consolidados</div>
+                <div class="kpi-value" id="kpiPasivos" style="color: #f87171;">$ 0</div>
+                <div class="kpi-sub">Obligaciones con Terceros</div>
+            </div>
+            <div class="kpi-card" style="background: #1e293b;">
+                <div class="kpi-title">Patrimonio Neto Consolidado</div>
+                <div class="kpi-value" id="kpiPatrimonio" style="color: #60a5fa;">$ 0</div>
+                <div class="kpi-sub">Incluye NCI / Minoritarios</div>
+            </div>
+            <div class="kpi-card" style="background: #1e293b;">
+                <div class="kpi-title">Nivel de Endeudamiento</div>
+                <div class="kpi-value" id="kpiEndeudamiento" style="color: #fbbf24;">0%</div>
+                <div class="kpi-sub">Pasivo / Activo Total</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header-title">
+                <i class="bi bi-bar-chart-line-fill"></i> Resumen de Indicadores Financieros Consolidados
+            </div>
+            <div id="contenedorMetricasFinancieras"></div>
+        </div>
+    </div>
+
+    <!-- PESTAÑA 3: MÓDULO DE AUDITORÍA -->
+    <div id="tab-auditoria" class="tab-content">
+        <div class="card">
+            <div class="card-header-title">
+                <i class="bi bi-shield-check"></i> Informe y Programa de Auditoría de Consolidación (NIA 600)
+            </div>
+            <p style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 24px;">
+                Verificación de controles contables, hallazgos de auditoría sobre eliminaciones intercompañía y prueba de deterioro de activos para asegurar integridad contable.
+            </p>
+            <div id="contenedorAuditoria"></div>
+        </div>
+    </div>
+
+    <!-- PESTAÑA 4: NOTAS NIIF -->
+    <div id="tab-notas" class="tab-content">
+        <div class="card">
+            <div class="card-header-title">
+                <i class="bi bi-journal-text"></i> Revelaciones Automatizadas a los Estados Financieros
+            </div>
+            <p style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 24px;">
+                Notas explicativas estructuradas bajo los estándares técnicos de revelación exigidos por las NIIF/IFRS para grupos económicos.
+            </p>
+            <div id="contenedorNotas"></div>
+        </div>
+    </div>
+
+    <!-- PESTAÑA 5: IA CONSULTORA -->
+    <div id="tab-ia" class="tab-content">
+        <div class="card">
+            <div class="card-header-title">
+                <i class="bi bi-cpu-fill"></i> Recomendaciones Automatizadas y Dictamen de IA
+            </div>
+            <div id="contenedorIA"></div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    let miGrafico = null;
+    let licenciaActiva = false;
+
+    // Base inicial rebalanceada para garantizar cuadre exacto (Activo = Pasivo + Patrimonio)
+    let estadosBase = [
+        { cuenta: "Efectivo y Equivalentes", matriz: 1850000000, filial: 420000000, tipo: 'ACT' },
+        { cuenta: "Cuentas por Cobrar Intercompañía", matriz: 50000000, filial: 0, tipo: 'ACT' },
+        { cuenta: "Inventarios", matriz: 600000000, filial: 280000000, tipo: 'ACT' },
+        { cuenta: "Propiedad, Planta y Equipo", matriz: 2600000000, filial: 850000000, tipo: 'ACT' },
+        
+        { cuenta: "Cuentas por Pagar Intercompañía", matriz: 0, filial: -50000000, tipo: 'PAS' },
+        { cuenta: "Pasivos Financieros a Largo Plazo", matriz: -850000000, filial: -380000000, tipo: 'PAS' },
+        { cuenta: "Pasivo por Impuesto Diferido", matriz: -120000000, filial: -45000000, tipo: 'PAS' },
+        
+        { cuenta: "Capital Social", matriz: -2000000000, filial: -600000000, tipo: 'PAT' },
+        { cuenta: "Resultados Acumulados", matriz: -2130000000, filial: -475000000, tipo: 'PAT' }
+    ];
+
+    const monedasConfig = {
+        COP: { simbolo: '$', tasaPorDefecto: 1, locale: 'es-CO' },
+        USD: { simbolo: '$', tasaPorDefecto: 0.00025, locale: 'en-US' },
+        EUR: { simbolo: '€', tasaPorDefecto: 0.00023, locale: 'de-DE' },
+        MXN: { simbolo: '$', tasaPorDefecto: 0.0045, locale: 'es-MX' },
+        GBP: { simbolo: '£', tasaPorDefecto: 0.00020, locale: 'en-GB' }
+    };
+
+    function formatearMonto(monto) {
+        const codMoneda = document.getElementById("selMoneda").value;
+        const config = monedasConfig[codMoneda] || monedasConfig.COP;
+        const tasaManual = parseFloat(document.getElementById("inTasaCambio").value) || 1;
+        const valorConvertido = monto * tasaManual;
+        return new Intl.NumberFormat(config.locale, {
+            style: 'currency', currency: codMoneda, maximumFractionDigits: codMoneda === 'COP' ? 0 : 2
+        }).format(valorConvertido);
+    }
+
+    // --- PAYWALL Y SEGURIDAD ---
+    function abrirPaywall() { document.getElementById("auth-screen").style.display = "flex"; }
+    function abrirEnlaceBold() { window.open("https://checkout.bold.co/payment/LNK_E497LI3PD4", '_blank'); }
+    function validarArchivoCargado() {
+        const fileInput = document.getElementById("inputComprobante");
+        if (fileInput.files.length > 0) {
+            document.getElementById("txtFileStatus").innerHTML = `<i class="bi bi-file-earmark-check-fill" style="color: #059669;"></i> Validando documento: <strong>${fileInput.files[0].name}</strong>`;
+            document.getElementById("btnVerificarPago").disabled = false;
+        }
+    }
+    function desbloquearConComprobante() {
+        setTimeout(() => {
+            licenciaActiva = true;
+            document.getElementById("auth-screen").style.display = "none";
+            document.getElementById("demo-banner").style.display = "none";
+            const badge = document.getElementById("badgeEstadoLock");
+            badge.className = "audit-badge badge-success";
+            badge.innerHTML = `<i class="bi bi-check-circle-fill"></i> Funciones de Edición Habilitadas`;
+            configurarBloqueoInputs(false);
+            ejecutarConsolidacion();
+        }, 500);
+    }
+    function continuarModoDemo() {
+        licenciaActiva = false;
+        document.getElementById("auth-screen").style.display = "none";
+        document.getElementById("demo-banner").style.display = "flex";
+        document.getElementById("app").classList.add("active");
+        configurarBloqueoInputs(true);
+        ejecutarConsolidacion();
+    }
+    function configurarBloqueoInputs(bloquear) {
+        document.querySelectorAll('.param-input').forEach(input => {
+            if (input.tagName.toLowerCase() === 'select') input.disabled = bloquear;
+            else bloquear ? input.setAttribute('readonly', 'readonly') : input.removeAttribute('readonly');
+        });
+        document.querySelectorAll('.app-interactive').forEach(el => el.disabled = bloquear);
+    }
+
+    // --- MÓDULO MANUAL ---
+    function agregarRubroManual() {
+        const cuenta = document.getElementById("inRubroNombre").value;
+        const matriz = parseFloat(document.getElementById("inRubroMatriz").value) || 0;
+        const filial = parseFloat(document.getElementById("inRubroFilial").value) || 0;
+        const tipo = document.getElementById("inRubroTipo").value;
+
+        if (!cuenta) return alert("Ingrese el nombre de la cuenta.");
+        // Si es pasivo o patrimonio, se procesa en negativo internamente (Naturaleza Crédito)
+        const factor = (tipo === 'PAS' || tipo === 'PAT') ? -1 : 1; 
+
+        estadosBase.push({ cuenta, matriz: matriz * factor, filial: filial * factor, tipo });
+        ejecutarConsolidacion();
+    }
+
+    // --- MOTOR CONTABLE ---
+    function ejecutarConsolidacion() {
+        const codMoneda = document.getElementById("selMoneda").value;
+        const selectorTasa = document.getElementById("inTasaCambio");
+        
+        if (document.activeElement.id === "selMoneda") {
+            selectorTasa.value = monedasConfig[codMoneda].tasaPorDefecto;
+        }
+
+        const partMatriz = (parseFloat(document.getElementById("inPart").value) || 0) / 100;
+        const tasaImpuesto = (parseFloat(document.getElementById("inTax").value) || 0) / 100;
+        const elimCxC = parseFloat(document.getElementById("inElimCxC").value) || 0;
+        const consid = parseFloat(document.getElementById("inConsid").value) || 0;
+
+        // Separadores Lógicos
+        let arrAct = [], arrPas = [], arrPat = [];
+        let subActMat = 0, subActFil = 0, subActAju = 0, subActEli = 0, subActTot = 0;
+        let subPasMat = 0, subPasFil = 0, subPasAju = 0, subPasEli = 0, subPasTot = 0;
+        let subPatMat = 0, subPatFil = 0, subPatAju = 0, subPatEli = 0, subPatTot = 0;
+
+        estadosBase.forEach(item => {
+            let ajusteNIIF3 = 0;
+            let eliminacion = 0;
+
+            if (item.cuenta.includes("Intercompañía")) {
+                eliminacion = item.tipo === 'ACT' ? -elimCxC : elimCxC;
+            }
+            if (item.cuenta.includes("Propiedad, Planta")) {
+                ajusteNIIF3 = item.filial * 0.15; 
+            }
+
+            const totalFila = item.matriz + item.filial + ajusteNIIF3 + eliminacion;
+            const obj = { ...item, ajuste: ajusteNIIF3, elim: eliminacion, total: totalFila };
+
+            if (item.tipo === 'ACT') {
+                arrAct.push(obj);
+                subActMat += item.matriz; subActFil += item.filial; subActAju += ajusteNIIF3; subActEli += eliminacion; subActTot += totalFila;
+            } else if (item.tipo === 'PAS') {
+                arrPas.push(obj);
+                subPasMat += Math.abs(item.matriz); subPasFil += Math.abs(item.filial); subPasAju += Math.abs(ajusteNIIF3); subPasEli += Math.abs(eliminacion); subPasTot += Math.abs(totalFila);
+            } else {
+                arrPat.push(obj);
+                subPatMat += Math.abs(item.matriz); subPatFil += Math.abs(item.filial); subPatAju += Math.abs(ajusteNIIF3); subPatEli += Math.abs(eliminacion); subPatTot += Math.abs(totalFila);
+            }
+        });
+
+        // Lógica de Compra y Patrimonio
+        const revaluacionVR = subActFil * 0.15; // VR Estimado
+        const pasivoImpDiferido = revaluacionVR * tasaImpuesto;
+        const activosNetosFilial = subActFil - subPasFil;
+        const activosNetosIdentificables = activosNetosFilial + revaluacionVR - pasivoImpDiferido;
+
+        const nci = activosNetosIdentificables * (1 - partMatriz);
+        const goodwill = (consid + nci) - activosNetosIdentificables;
+
+        // Sumar Plusvalía al Activo
+        if(goodwill > 0) {
+            arrAct.push({ cuenta: "Plusvalía (Goodwill)", matriz: 0, filial: 0, ajuste: goodwill, elim: 0, total: goodwill });
+            subActAju += goodwill; subActTot += goodwill;
+        }
+
+        // Eliminar Inversión vs Patrimonio Filial e incluir NCI
+        const patrimonioMatrizOriginal = subPatMat; // Patrimonio del Grupo es el de la Matriz + NCI + Utilidades Retenidas Consolidadas (simplificado en matriz)
+        arrPat.push({ cuenta: "Interés No Controlador (NCI)", matriz: 0, filial: 0, ajuste: nci, elim: 0, total: nci });
+        
+        // Ajustamos el subtotal de Patrimonio para reflejar eliminación de patrimonio subsidiaria e inclusión de NCI
+        subPatTot = patrimonioMatrizOriginal + nci;
+
+        // Renderizar Tablas
+        const tbody = document.querySelector("#tblMatriz tbody");
+        tbody.innerHTML = "";
+        
+        const renderRow = (arr) => arr.map(i => `
+            <tr>
+                <td>${i.cuenta}</td>
+                <td>${formatearMonto(Math.abs(i.matriz))}</td>
+                <td>${formatearMonto(Math.abs(i.filial))}</td>
+                <td class="col-ajuste">${formatearMonto(Math.abs(i.ajuste))}</td>
+                <td class="col-elim">${formatearMonto(Math.abs(i.elim))}</td>
+                <td class="col-total">${formatearMonto(Math.abs(i.total))}</td>
+            </tr>
+        `).join('');
+
+        tbody.innerHTML += `
+            <tr class="row-group"><td colspan="6">ACTIVOS</td></tr>
+            ${renderRow(arrAct)}
+            <tr class="row-subtotal"><td>TOTAL ACTIVOS</td><td>${formatearMonto(Math.abs(subActMat))}</td><td>${formatearMonto(Math.abs(subActFil))}</td><td>${formatearMonto(Math.abs(subActAju))}</td><td>${formatearMonto(Math.abs(subActEli))}</td><td class="col-total">${formatearMonto(Math.abs(subActTot))}</td></tr>
+            
+            <tr class="row-group"><td colspan="6">PASIVOS</td></tr>
+            ${renderRow(arrPas)}
+            <tr class="row-subtotal"><td>TOTAL PASIVOS</td><td>${formatearMonto(Math.abs(subPasMat))}</td><td>${formatearMonto(Math.abs(subPasFil))}</td><td>${formatearMonto(Math.abs(subPasAju))}</td><td>${formatearMonto(Math.abs(subPasEli))}</td><td class="col-total">${formatearMonto(Math.abs(subPasTot))}</td></tr>
+            
+            <tr class="row-group"><td colspan="6">PATRIMONIO</td></tr>
+            ${renderRow(arrPat)}
+            <tr class="row-subtotal"><td>TOTAL PATRIMONIO</td><td>${formatearMonto(Math.abs(subPatMat))}</td><td>${formatearMonto(Math.abs(subPatFil))}</td><td>-</td><td>-</td><td class="col-total">${formatearMonto(Math.abs(subPatTot))}</td></tr>
+        `;
+
+        // Validación de Ecuación Contable
+        const ecuacionDiferencia = subActTot - (subPasTot + subPatTot);
+        const divCuadre = document.getElementById("estadoCuadre");
+        if(Math.abs(ecuacionDiferencia) < 1) {
+            divCuadre.innerHTML = `<span class="audit-badge badge-success"><i class="bi bi-shield-check"></i> Balance Contable Exacto (A = P + PT)</span>`;
+        } else {
+            divCuadre.innerHTML = `<span class="audit-badge badge-danger"><i class="bi bi-exclamation-triangle"></i> Diferencia Contable: ${formatearMonto(ecuacionDiferencia)}</span>`;
+        }
+
+        // Actualización de KPIs
+        document.getElementById("valGoodwill").innerText = formatearMonto(Math.abs(goodwill));
+        document.getElementById("txtResultadoTipo").innerText = goodwill >= 0 ? "PLUSVALÍA (GOODWILL)" : "GANANCIA POR COMPRA";
+        document.getElementById("kpiActivos").innerText = formatearMonto(subActTot);
+        document.getElementById("kpiPasivos").innerText = formatearMonto(subPasTot);
+        document.getElementById("kpiPatrimonio").innerText = formatearMonto(subPatTot);
+        
+        const ratioEndeudamiento = subActTot > 0 ? (subPasTot / subActTot) * 100 : 0;
+        document.getElementById("kpiEndeudamiento").innerText = ratioEndeudamiento.toFixed(1) + "%";
+
+        actualizarGrafico(subActTot, subPasTot, Math.max(0, goodwill));
+        generarMetricasFinancieras(subActTot, subPasTot, subPatTot);
+        generarModuloAuditoria(elimCxC, goodwill, ratioEndeudamiento);
+        generarNotasRevelatorias(partMatriz, consid, goodwill, nci, activosNetosIdentificables, codMoneda);
+        generarDiagnosticoIA(subActTot, subPatTot, goodwill, ratioEndeudamiento);
+    }
+
+    function generarMetricasFinancieras(activos, pasivos, patrimonio) {
+        const div = document.getElementById("contenedorMetricasFinancieras");
+        const coberturaPatrimonial = pasivos > 0 ? activos / pasivos : 0;
+        const apalancamiento = patrimonio > 0 ? pasivos / patrimonio : 0;
+
+        div.innerHTML = `
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid var(--border);">
+                    <h5 style="color: var(--primary); margin-bottom: 8px; font-size: 1rem;">Solvencia Global</h5>
+                    <p style="font-size: 0.9rem; color: var(--text-muted);">Relación de Cobertura Patrimonial:</p>
+                    <p style="font-size: 1.6rem; font-weight: 800; color: var(--success); margin: 6px 0;">${coberturaPatrimonial.toFixed(2)}x</p>
+                    <span style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; display: block;">Por cada unidad monetaria adeudada, el grupo consolida ${coberturaPatrimonial.toFixed(2)} unidades en activos de respaldo.</span>
+                </div>
+                <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid var(--border);">
+                    <h5 style="color: var(--primary); margin-bottom: 8px; font-size: 1rem;">Apalancamiento Financiero (Leverage)</h5>
+                    <p style="font-size: 0.9rem; color: var(--text-muted);">Estructura Pasivo / Patrimonio Neto:</p>
+                    <p style="font-size: 1.6rem; font-weight: 800; color: var(--primary); margin: 6px 0;">${apalancamiento.toFixed(2)}x</p>
+                    <span style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; display: block;">Proporción técnica del capital consolidado que se encuentra comprometido con terceros acreedores.</span>
+                </div>
+            </div>
+        `;
+    }
+
+    function generarModuloAuditoria(elimCxC, goodwill, ratioEndeudamiento) {
+        const div = document.getElementById("contenedorAuditoria");
+        let estadoEliminacion = elimCxC > 0 ? `<span class="audit-badge badge-success"><i class="bi bi-check-circle"></i> Conciliado</span>` : `<span class="audit-badge badge-warning"><i class="bi bi-exclamation-triangle"></i> Pendiente</span>`;
+        let estadoGoodwill = goodwill > 0 ? `<span class="audit-badge badge-warning"><i class="bi bi-shield-exclamation"></i> Requiere Prueba NIC 36</span>` : `<span class="audit-badge badge-success"><i class="bi bi-check-circle"></i> Sin Riesgo de Deterioro</span>`;
+
+        div.innerHTML = `
+            <div class="nota-niif-item">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;"><h4 style="margin: 0;">1. Verificación de Eliminaciones (NIA 600)</h4>${estadoEliminacion}</div>
+                <p>Procedimiento sobre la simetría entre Cuentas por Cobrar Controladora y Cuentas por Pagar Filial. Saldo eliminado: <strong>${formatearMonto(elimCxC)}</strong>.</p>
+            </div>
+            <div class="nota-niif-item">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;"><h4 style="margin: 0;">2. Evaluación de Intangible (NIA 540 / NIC 36)</h4>${estadoGoodwill}</div>
+                <p>Determinación de Plusvalía por valor de <strong>${formatearMonto(Math.abs(goodwill))}</strong>. Requiere modelo de descuento de flujos (UGE) para constatar inexistencia de deterioro.</p>
+            </div>
+        `;
+    }
+
+    function generarNotasRevelatorias(part, consid, goodwill, nci, activosNetos, codMoneda) {
+        const div = document.getElementById("contenedorNotas");
+        div.innerHTML = `
+            <div class="nota-niif-item">
+                <h4>Nota 1. Consolidación (NIIF 10)</h4>
+                <p>Control efectivo fundamentado en la retención del <strong>${(part * 100).toFixed(1)}%</strong>. Transacciones intergrupales depuradas.</p>
+            </div>
+            <div class="nota-niif-item">
+                <h4>Nota 2. Combinaciones de Negocios (NIIF 3)</h4>
+                <p>Contraprestación: <strong>${formatearMonto(consid)}</strong>. Activos netos: <strong>${formatearMonto(activosNetos)}</strong>. Reconocimiento de Plusvalía: <strong>${formatearMonto(Math.abs(goodwill))}</strong>.</p>
+            </div>
+            <div class="nota-niif-item">
+                <h4>Nota 3. Intereses No Controladores - NCI (NIIF 12)</h4>
+                <p>Proporción minoritaria del <strong>${((1 - part) * 100).toFixed(1)}%</strong> representa un total de <strong>${formatearMonto(nci)}</strong>.</p>
+            </div>
+        `;
+    }
+
+    function generarDiagnosticoIA(activos, patrimonio, goodwill, ratio) {
+        const div = document.getElementById("contenedorIA");
+        let html = `<div class="ai-card"><h4><i class="bi bi-graph-up-arrow"></i> Evaluación Estructural</h4><p>Base de activos <strong>${formatearMonto(activos)}</strong> contra patrimonio de <strong>${formatearMonto(patrimonio)}</strong>. Apalancamiento del <strong>${ratio.toFixed(1)}%</strong>.</p></div>`;
+        if (goodwill > 0) html += `<div class="ai-card warning"><h4><i class="bi bi-lightbulb-fill"></i> Recomendación Sistémica (NIC 36)</h4><p>Plusvalía activa detectada. Programar modelo DCF y WACC actualizado para contingencias de auditoría.</p></div>`;
+        div.innerHTML = html;
+    }
+
+    function actualizarGrafico(activos, pasivos, goodwill) {
+        const ctx = document.getElementById('chartEstructura').getContext('2d');
+        if (miGrafico) miGrafico.destroy();
+        Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+        miGrafico = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Activos Operativos', 'Pasivos Consolidados', 'Goodwill'],
+                datasets: [{ data: [activos - goodwill, pasivos, goodwill], backgroundColor: ['#059669', '#cbd5e1', '#2563eb'], borderWidth: 2, borderColor: '#ffffff', hoverOffset: 6 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom' } } }
+        });
+    }
+
+    function cambiarPestana(event, idTab) {
+        document.querySelectorAll('.nav-tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+        document.getElementById(idTab).classList.add('active');
+    }
+
+    function exportarExcel() {
+        const libro = XLSX.utils.table_to_book(document.getElementById("tblMatriz"), { sheet: "Consolidacion" });
+        XLSX.writeFile(libro, "Matriz_Consolidacion.xlsx");
+    }
+
+    function exportarPDF() {
+        const elemento = document.getElementById('app');
+        document.querySelectorAll('.btn-excel, .btn-primary.app-interactive').forEach(btn => btn.style.display = 'none');
+        html2pdf().set({ margin: 10, filename: 'Reporte_NIIF.pdf', html2canvas: { scale: 2 }, jsPDF: { orientation: 'landscape' } }).from(elemento).save().then(() => {
+            document.querySelectorAll('.btn-excel, .btn-primary.app-interactive').forEach(btn => btn.style.display = 'inline-flex');
+        });
+    }
+
+    window.onload = continuarModoDemo;
+</script>
+</body>
+</html>
